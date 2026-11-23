@@ -1,14 +1,10 @@
 <?php
-require_once 'Database.php';
-
 abstract class BaseModel {
     protected $db;
 
-    public function __construct() {
-        $database = new Database();
-        $this->db = $database->getConnection();
+    public function __construct(PDO $db) {
+        $this->db = $db;
     }
 
     abstract public function getAll();
 }
-?>
