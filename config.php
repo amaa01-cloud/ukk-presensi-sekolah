@@ -1,10 +1,12 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'db_presensi_sekolah');
+// Aktifkan error reporting untuk mendeteksi error dengan jelas
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Panggil file database.php
+require_once 'database.php';
+
+// Inisialisasi koneksi
+$database = new Database();
+$db = $database->getConnection();
 ?>
