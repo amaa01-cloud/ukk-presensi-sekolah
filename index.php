@@ -1,115 +1,101 @@
 <?php
-require_once 'includes/auth.php';
-require_once 'config/Database.php';
-require_once 'models/Presensi.php';
-require_once 'models/Kelas.php';
+session_start();
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit;
+}
+
+require_once 'auth.php';
+require_once 'config/database.php';
+require_once 'models/presensi.php';
+require_once 'models/kelas.php';
 
 $db = (new Database())->getConnection();
 $presensiModel = new Presensi($db);
 $kelasModel = new Kelas($db);
 
-$success = '';
-$error = '';
+$pesan = '';
 
-// Handle Hapus Log
+// Hapus log presensi
 if (isset($_GET['hapus'])) {
     $id_hapus = (int)$_GET['hapus'];
     if ($presensiModel->delete($id_hapus)) {
-        $success = "Log presensi berhasil dihapus.";
-    } else {
-        $error = "Gagal menghapus log presensi.";
+        $pesan = "Log presensi berhasil dihapus.";
     }
 }
 
-// Default filter tanggal hari ini
-$tanggal = $_GET['tanggal'] ?? date('Y-m-d');
+// Default tanggal hari ini, kecuali user mengosongkan/memilih tanggal lain
+$tanggal = isset($_GET['tanggal']) ? $_GET['tanggal'] : date('Y-m-d');
 $id_kelas = $_GET['id_kelas'] ?? '';
-$keyword = trim($_GET['cari'] ?? '');
+$keyword = trim($_GET['keyword'] ?? '');
 
-$daftarKelas = $kelasModel->getAll();
-$daftarPresensi = $presensiModel->getAll($tanggal, $id_kelas, $keyword);
+$daftar_kelas = $kelasModel->getAll();
+$data_presensi = $presensiModel->getAll($tanggal, $id_kelas, $keyword);
 
-include 'includes/header.php';
-include 'includes/navbar.php';
+require_once 'layouts/header.php';
+require_once 'layouts/navbar.php';
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold mb-0">Rekap Presensi Siswa</h4>
-    <a href="tap.php" class="btn btn-success btn-sm">+ Simulasi Tap Kartu</a>
-</div>
+<h2>Rekap Presensi Siswa</h2>
 
-<?php if ($success): ?>
-    <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-<?php endif; ?>
-<?php if ($error): ?>
-    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+<?php if ($pesan): ?>
+    <p><strong>Info:</strong> <?= htmlspecialchars($pesan) ?></p>
 <?php endif; ?>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="GET" action="index.php" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold">Tanggal</label>
-                <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars($tanggal) ?>">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold">Filter Kelas</label>
-                <select name="id_kelas" class="form-select">
-                    <option value="">-- Semua Kelas --</option>
-                    <?php foreach ($daftarKelas as $k): ?>
-                        <option value="<?= $k['id_kelas'] ?>" <?= ($id_kelas == $k['id_kelas']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($k['nama_kelas']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold">Cari Siswa (Nama / NISN)</label>
-                <input type="text" name="cari" class="form-control" placeholder="Ketik nama atau NISN..." value="<?= htmlspecialchars($keyword) ?>">
-            </div>
-            <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100">Filter</button>
-                <a href="index.php" class="btn btn-outline-secondary">Reset</a>
-            </div>
-        </form>
-    </div>
-</div>
+<form method="GET" action="">
+    <label>Tanggal:</label>
+    <input type="date" name="tanggal" value="<?= htmlspecialchars($tanggal) ?>">
 
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <label>Kelas:</label>
+    <select name="id_kelas">
+        <option value="">-- Semua Kelas --</option>
+        <?php foreach ($daftar_kelas as $k): ?>
+            <option value="<?= $k['id_kelas'] ?>" <?= ($id_kelas == $k['id_kelas']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($k['nama_kelas']) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+
+    <label>Cari (Nama/NISN):</label>
+    <input type="text" name="keyword" value="<?= htmlspecialchars($keyword) ?>" placeholder="Ketik nama atau NISN...">
+
+    <button type="submit">Filter / Cari</button>
+    <a href="index.php">Reset Hari Ini</a>
+</form>
+<br>
+
+<table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+        <tr>
+            <th>No</th>
+            <th>NISN</th>
+            <th>Nama Siswa</th>
+            <th>Kelas</th>
+            <th>Waktu Presensi</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php if (count($data_presensi) > 0): ?>
+            <?php $no = 1; foreach ($data_presensi as $row): ?>
                 <tr>
-                    <th>No</th>
-                    <th>NISN</th>
-                    <th>Nama Siswa</th>
-                    <th>Kelas</th>
-                    <th>Waktu Tap</th>
-                    <th width="100">Aksi</th>
+                    <td><?= $no++ ?></td>
+                    <td><?= htmlspecialchars($row['nisn']) ?></td>
+                    <td><?= htmlspecialchars($row['nama']) ?></td>
+                    <td><?= htmlspecialchars($row['nama_kelas']) ?></td>
+                    <td><?= htmlspecialchars($row['tanggal_waktu']) ?></td>
+                    <td>
+                        <a href="index.php?hapus=<?= $row['id'] ?>&tanggal=<?= htmlspecialchars($tanggal) ?>&id_kelas=<?= htmlspecialchars($id_kelas) ?>&keyword=<?= htmlspecialchars($keyword) ?>" 
+                           onclick="return confirm('Hapus log presensi ini?')">Hapus</a>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($daftarPresensi)): ?>
-                    <tr><td colspan="6" class="text-center text-muted py-4">Tidak ada data presensi pada filter ini.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($daftarPresensi as $i => $p): ?>
-                        <tr>
-                            <td><?= $i + 1 ?></td>
-                            <td><code><?= htmlspecialchars($p['nisn']) ?></code></td>
-                            <td class="fw-semibold"><?= htmlspecialchars($p['nama']) ?></td>
-                            <td><span class="badge bg-primary"><?= htmlspecialchars($p['nama_kelas']) ?></span></td>
-                            <td><?= date('d-m-Y H:i:s', strtotime($p['tanggal_waktu'])) ?></td>
-                            <td>
-                                <a href="index.php?hapus=<?= $p['id'] ?>&tanggal=<?= urlencode($tanggal) ?>&id_kelas=<?= urlencode($id_kelas) ?>&cari=<?= urlencode($keyword) ?>" 
-                                   class="btn btn-danger btn-sm" 
-                                   onclick="return confirm('Hapus log presensi <?= htmlspecialchars($p['nama']) ?>?')">Hapus</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr>
+                <td colspan="6">Tidak ada data presensi ditemukan.</td>
+            </tr>
+        <?php endif; ?>
+    </tbody>
+</table>
 
-<?php include 'includes/footer.php'; ?>
+<?php require_once 'layouts/footer.php'; ?>

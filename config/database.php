@@ -1,23 +1,10 @@
-<?php
+<?php // File: database.php (PDO Constructor & Exception Handling)
 class Database {
-    private $host = "localhost";
-    private $db_name = "db_presensi_siswa";
-    private $username = "root";
-    private $password = "";
-    private $conn;
-
+    protected $pdo;
     public function __construct() {
         try {
-            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
-            $this->conn = new PDO($dsn, $this->username, $this->password);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            die("Koneksi database gagal: " . $e->getMessage());
-        }
-    }
-
-    public function getConnection() {
-        return $this->conn;
+            $this->pdo = new PDO("mysql:host=localhost;dbname=db_presensi", "root", "", [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        } catch (PDOException $e) { die("Koneksi Gagal: " . $e->getMessage()); }
     }
 }
+?>

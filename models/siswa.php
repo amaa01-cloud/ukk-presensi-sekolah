@@ -1,5 +1,5 @@
 <?php
-require_once 'BaseModel.php';
+require_once __DIR__ . '/basemodel.php';
 
 class Siswa extends BaseModel {
     private $nisn;
@@ -7,30 +7,30 @@ class Siswa extends BaseModel {
     private $alamat;
     private $id_kelas;
 
-    public function setNisn($nisn) { $this->nisn = $nisn; }
     public function getNisn() { return $this->nisn; }
+    public function setNisn($nisn) { $this->nisn = $nisn; }
 
-    public function setNama($nama) { $this->nama = $nama; }
     public function getNama() { return $this->nama; }
+    public function setNama($nama) { $this->nama = $nama; }
 
-    public function setAlamat($alamat) { $this->alamat = $alamat; }
     public function getAlamat() { return $this->alamat; }
+    public function setAlamat($alamat) { $this->alamat = $alamat; }
 
-    public function setIdKelas($id_kelas) { $this->id_kelas = $id_kelas; }
     public function getIdKelas() { return $this->id_kelas; }
+    public function setIdKelas($id_kelas) { $this->id_kelas = $id_kelas; }
 
     public function getAll($keyword = '') {
-        $sql = "SELECT siswa.*, kelas.nama_kelas, kelas.jurusan 
-                FROM siswa 
-                INNER JOIN kelas ON siswa.id_kelas = kelas.id_kelas";
+        $sql = "SELECT s.*, k.nama_kelas, k.jurusan 
+                FROM siswa s 
+                INNER JOIN kelas k ON s.id_kelas = k.id_kelas";
         $params = [];
 
         if (!empty($keyword)) {
-            $sql .= " WHERE siswa.nama LIKE :kw OR siswa.nisn LIKE :kw";
+            $sql .= " WHERE s.nama LIKE :kw OR s.nisn LIKE :kw";
             $params[':kw'] = "%$keyword%";
         }
 
-        $sql .= " ORDER BY siswa.nama ASC";
+        $sql .= " ORDER BY s.nama ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
@@ -40,6 +40,17 @@ class Siswa extends BaseModel {
         $stmt = $this->db->prepare("SELECT * FROM siswa WHERE nisn = :nisn");
         $stmt->execute([':nisn' => $nisn]);
         return $stmt->fetch();
+    }
+
+    public function isNisnExists($nisn, $exclude_nisn = null) {
+        if ($exclude_nisn) {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa WHERE nisn = :nisn AND nisn != :ex");
+            $stmt->execute([':nisn' => $nisn, ':ex' => $exclude_nisn]);
+        } else {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa WHERE nisn = :nisn");
+            $stmt->execute([':nisn' => $nisn]);
+        }
+        return $stmt->fetchColumn() > 0;
     }
 
     public function create() {

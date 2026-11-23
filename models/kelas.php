@@ -1,22 +1,23 @@
 <?php
-require_once 'BaseModel.php';
+require_once __DIR__ . '/basemodel.php';
 
 class Kelas extends BaseModel {
     private $id_kelas;
     private $nama_kelas;
     private $jurusan;
 
-    public function setIdKelas($id_kelas) { $this->id_kelas = $id_kelas; }
     public function getIdKelas() { return $this->id_kelas; }
+    public function setIdKelas($id) { $this->id_kelas = $id; }
 
-    public function setNamaKelas($nama_kelas) { $this->nama_kelas = $nama_kelas; }
     public function getNamaKelas() { return $this->nama_kelas; }
+    public function setNamaKelas($nama) { $this->nama_kelas = $nama; }
 
-    public function setJurusan($jurusan) { $this->jurusan = $jurusan; }
     public function getJurusan() { return $this->jurusan; }
+    public function setJurusan($jurusan) { $this->jurusan = $jurusan; }
 
     public function getAll() {
-        $stmt = $this->db->query("SELECT * FROM kelas ORDER BY nama_kelas ASC");
+        $stmt = $this->db->prepare("SELECT * FROM kelas ORDER BY nama_kelas ASC");
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 
@@ -38,33 +39,31 @@ class Kelas extends BaseModel {
     }
 
     public function create() {
-        $stmt = $this->db->prepare("INSERT INTO kelas (nama_kelas, jurusan) VALUES (:nama_kelas, :jurusan)");
+        $stmt = $this->db->prepare("INSERT INTO kelas (nama_kelas, jurusan) VALUES (:nama, :jurusan)");
         return $stmt->execute([
-            ':nama_kelas' => $this->nama_kelas,
+            ':nama' => $this->nama_kelas,
             ':jurusan' => $this->jurusan
         ]);
     }
 
     public function update() {
-        $stmt = $this->db->prepare("UPDATE kelas SET nama_kelas = :nama_kelas, jurusan = :jurusan WHERE id_kelas = :id_kelas");
+        $stmt = $this->db->prepare("UPDATE kelas SET nama_kelas = :nama, jurusan = :jurusan WHERE id_kelas = :id");
         return $stmt->execute([
-            ':nama_kelas' => $this->nama_kelas,
+            ':nama' => $this->nama_kelas,
             ':jurusan' => $this->jurusan,
-            ':id_kelas' => $this->id_kelas
+            ':id' => $this->id_kelas
         ]);
     }
 
-    public function hasSiswa($id_kelas) {
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa WHERE id_kelas = :id");
-        $stmt->execute([':id' => $id_kelas]);
-        return $stmt->fetchColumn() > 0;
-    }
-
-    public function delete($id_kelas) {
-        if ($this->hasSiswa($id_kelas)) {
-            return false;
+    public function delete($id) {
+        try {
+            $stmt = $this->db->prepare("DELETE FROM kelas WHERE id_kelas = :id");
+            return $stmt->execute([':id' => $id]);
+        } catch (PDOException $e) {
+            if ($e->getCode() == '23000') {
+                throw new Exception("Kelas tidak dapat dihapus karena masih memiliki data siswa terdaftar.");
+            }
+            throw new Exception("Terjadi kesalahan saat menghapus data kelas.");
         }
-        $stmt = $this->db->prepare("DELETE FROM kelas WHERE id_kelas = :id");
-        return $stmt->execute([':id' => $id_kelas]);
     }
 }

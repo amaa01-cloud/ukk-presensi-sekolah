@@ -1,35 +1,45 @@
 <?php
-require_once 'BaseModel.php';
+class User extends BaseModel
+{
+    private ?int $id = null;
+    private string $username = '';
+    private string $passwordHash = '';
 
-class User extends BaseModel {
-    private $id;
-    private $username;
-    private $password;
+    public function __construct(PDO $db) { parent::__construct($db); }
 
-    public function setId($id) { $this->id = $id; }
-    public function getId() { return $this->id; }
-
-    public function setUsername($username) { $this->username = $username; }
-    public function getUsername() { return $this->username; }
-
-    public function setPassword($password) { $this->password = $password; }
-    public function getPassword() { return $this->password; }
-
-    public function getAll() {
-        $stmt = $this->db->query("SELECT id, username FROM users");
-        return $stmt->fetchAll();
+    public function getId(): ?int { return $this->id; }
+    public function getUsername(): string { return $this->username; }
+    public function setUsername(string $u): void { $this->username = $u; }
+    public function setPassword(string $plain): void
+    {
+        $this->passwordHash = password_hash($plain, PASSWORD_DEFAULT);
     }
 
-    public function login($username, $password) {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE username = :username LIMIT 1");
-        $stmt->execute([':username' => $username]);
-        $user = $stmt->fetch();
+    public function getAll(): array
+    {
+        return $this->db->query("SELECT id, username, created_at FROM users")->fetchAll();
+    }
 
-        if ($user && password_verify($password, $user['password'])) {
-            $this->setId($user['id']);
-            $this->setUsername($user['username']);
-            return true;
-        }
-        return false;
+    public function findByUsername(string $username): bool
+    {
+        $stmt = $this->db->prepare("SELECT id, username, password FROM users WHERE username = :u LIMIT 1");
+        $stmt->execute([':u' => $username]);
+        $row = $stmt->fetch();
+        if (!$row) return false;
+        $this->id = (int)$row['id'];
+        $this->username = $row['username'];
+        $this->passwordHash = $row['password'];
+        return true;
+    }
+
+    public function verifyPassword(string $plain): bool
+    {
+        return $this->passwordHash !== '' && password_verify($plain, $this->passwordHash);
+    }
+
+    public function create(): bool
+    {
+        $stmt = $this->db->prepare("INSERT INTO users (username, password) VALUES (:u, :p)");
+        return $stmt->execute([':u' => $this->username, ':p' => $this->passwordHash]);
     }
 }

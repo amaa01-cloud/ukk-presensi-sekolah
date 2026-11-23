@@ -1,68 +1,58 @@
 <?php
-require_once 'includes/auth.php';
-require_once 'config/Database.php';
-require_once 'models/Siswa.php';
-require_once 'models/Presensi.php';
+require_once 'auth.php';
+require_once 'config/database.php';
+require_once 'models/siswa.php';
+require_once 'models/presensi.php';
 
 $db = (new Database())->getConnection();
 $siswaModel = new Siswa($db);
 $presensiModel = new Presensi($db);
 
 $error = '';
-$success = '';
-$nisn_input = '';
+$sukses = '';
+$nisn = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nisn_input = trim($_POST['nisn'] ?? '');
+    $nisn = trim($_POST['nisn'] ?? '');
 
-    if ($nisn_input === '') {
-        $error = "Silakan tempelkan kartu atau masukkan NISN.";
+    if (empty($nisn)) {
+        $error = "Silakan masukkan atau tempelkan kartu NISN terlebih dahulu.";
     } else {
-        $siswa = $siswaModel->getByNisn($nisn_input);
+        $siswa = $siswaModel->getByNisn($nisn);
         if (!$siswa) {
-            $error = "Tap ditolak: Kartu dengan NISN '" . htmlspecialchars($nisn_input) . "' tidak terdaftar di sistem.";
-            $nisn_input = '';
+            $error = "Tap ditolak: NISN ($nisn) tidak terdaftar di sistem.";
         } else {
-            $presensiModel->setNisn($siswa['nisn']);
+            $presensiModel->setNisn($nisn);
             if ($presensiModel->tapKartu()) {
-                $success = "Presensi berhasil dicatat untuk: <strong>" . htmlspecialchars($siswa['nama']) . "</strong> (" . htmlspecialchars($siswa['nisn']) . ")";
-                $nisn_input = '';
+                $sukses = "Presensi berhasil dicatat untuk: " . $siswa['nama'] . " (NISN: " . $siswa['nisn'] . ")";
+                $nisn = ''; // Kosongkan input setelah berhasil tap
             } else {
-                $error = "Terjadi kesalahan saat menyimpan presensi.";
+                $error = "Gagal mencatat presensi.";
             }
         }
     }
 }
 
-include 'includes/header.php';
-include 'includes/navbar.php';
+require_once 'layouts/header.php';
+require_once 'layouts/navbar.php';
 ?>
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm text-center">
-            <div class="card-header bg-white fw-bold">Simulasi Mesin Pembaca Kartu RFID</div>
-            <div class="card-body p-4">
-                <p class="text-muted small mb-4">Tempelkan kartu RFID atau ketik 10 digit NISN siswa lalu tekan Enter.</p>
+<h2>Simulasi Tap Kartu RFID</h2>
 
-                <?php if ($error): ?>
-                    <div class="alert alert-danger"><?= $error ?></div>
-                <?php endif; ?>
+<?php if ($error): ?>
+    <p><strong>Error:</strong> <?= htmlspecialchars($error) ?></p>
+<?php endif; ?>
 
-                <?php if ($success): ?>
-                    <div class="alert alert-success"><?= $success ?></div>
-                <?php endif; ?>
+<?php if ($sukses): ?>
+    <p><strong>Berhasil:</strong> <?= htmlspecialchars($sukses) ?></p>
+<?php endif; ?>
 
-                <form method="POST" action="tap.php">
-                    <div class="mb-3">
-                        <input type="text" name="nisn" class="form-control form-control-lg text-center fw-bold" 
-                               placeholder="Scan / Ketik NISN..." maxlength="10" value="<?= htmlspecialchars($nisn_input) ?>" autofocus autocomplete="off">
-                    </div>
-                    <button type="submit" class="btn btn-success btn-lg w-100">Tap Kartu</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<form method="POST" action="">
+    <div>
+        <label>Tempelkan Kartu / Masukkan NISN (10 Digit):</label><br>
+        <input type="text" name="nisn" value="<?= htmlspecialchars($nisn) ?>" autofocus placeholder="Contoh: 0081234567">
+    </div><br>
+    <button type="submit">Tap Kartu</button>
+</form>
 
-<?php include 'includes/footer.php'; ?>
+<?php require_once 'layouts/footer.php'; ?>
