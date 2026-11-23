@@ -4,18 +4,20 @@ class Database {
     private $db_name = "db_presensi_sekolah";
     private $username = "root";
     private $password = "";
-    public $conn;
+    private $conn;
 
-    public function getConnection() {
-        $this->conn = null;
+    public function __construct() {
         try {
-            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
+            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
+            $this->conn = new PDO($dsn, $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        } catch(PDOException $exception) {
-            die("Koneksi database gagal: " . $exception->getMessage());
+        } catch (PDOException $e) {
+            die("Koneksi database gagal: " . $e->getMessage());
         }
+    }
+
+    public function getConnection() {
         return $this->conn;
     }
 }
-?>
